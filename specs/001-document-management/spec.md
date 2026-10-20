@@ -5,6 +5,14 @@
 **Status**: Draft  
 **Input**: User description: "--file StakeholderDocs/document-upload-and-management-feature.md"
 
+## Clarifications
+
+### Session 2026-10-20
+
+- Q: When a user is removed from a project after uploading project documents, what access and ownership behavior should the system enforce for those existing documents? → A: Keep documents with the project; remove the former member's project-derived access, and allow access only through remaining role-based or explicit share permissions.
+- Q: Should a document owner be able to revoke a previous share, and what should happen to the recipient's access afterward? → A: Owners can revoke shares at any time; recipients lose access granted by that share but retain any access granted independently by project membership or role.
+- Q: When a document is shared with a team, which users should count as members of that recipient team? → A: A team is all users in the selected department.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Upload a document with metadata (Priority: P1)
@@ -106,6 +114,9 @@ members can view/download them and a project manager can upload to the project.
    and associated with that project.
 3. **Given** a user who is not a project member, **When** they attempt to view the project's documents,
    **Then** access is denied.
+4. **Given** a user who uploaded a project document and is later removed from that project, **When** they
+  attempt to access it, **Then** the document remains with the project and access is denied unless another
+  role-based permission or explicit share grants access.
 
 ---
 
@@ -132,6 +143,8 @@ with confirmation, verifying each change takes effect and permissions are enforc
    is permanently removed.
 5. **Given** a user who is neither uploader nor the project's manager, **When** they attempt to edit or
    delete, **Then** the action is denied.
+6. **Given** a former project member who uploaded a document, **When** they attempt to edit or delete it
+  after removal, **Then** uploader status alone does not grant access or management rights.
 
 ---
 
@@ -153,6 +166,11 @@ in-app notification and the document appears in their "Shared with Me".
 2. **Given** a recipient, **When** a document is shared with them, **Then** they receive an in-app
    notification.
 3. **Given** a recipient, **When** they open "Shared with Me", **Then** the shared document is listed.
+4. **Given** a document owner who has shared a document, **When** they revoke that share, **Then** the
+  recipient loses access granted by the share while retaining any independent project or role-based
+  access.
+5. **Given** a document owner sharing with a team, **When** they select a department, **Then** users
+  currently assigned to that department receive the share and users outside it do not.
 
 ---
 
@@ -211,6 +229,9 @@ confirming they are logged and that an administrator can generate the summary re
   is informed; no partial document is stored.
 - How does the system handle a user attempting to access a document by guessing its identifier? The system
   denies access based on the user's permissions regardless of the identifier used.
+- What happens when a user is removed from a project after uploading project documents? The documents
+  remain with the project; project-derived access and uploader-only access are revoked, while other
+  applicable role-based permissions or explicit shares continue to govern access.
 - What happens when a user previews an unsupported type for preview (e.g., a spreadsheet)? The system
   offers download instead of in-browser preview.
 - What happens when a deleted document is referenced by a task or share? The reference is handled
@@ -265,11 +286,13 @@ confirming they are logged and that an administrator can generate the summary re
 **Project access**
 
 - **FR-022**: System MUST show all documents associated with a project to that project's members for view
-  and download.
+  and download, and MUST revoke access derived from project membership when a user is removed from that
+  project.
 
 **Sharing and notifications**
 
-- **FR-023**: Document owners MUST be able to share documents with specific users or teams.
+- **FR-023**: Document owners MUST be able to share documents with specific users or a department team;
+  a department team consists of users currently assigned to the selected department.
 - **FR-024**: System MUST notify recipients in-app when a document is shared with them.
 - **FR-025**: Shared documents MUST appear in each recipient's "Shared with Me" area.
 - **FR-026**: System MUST notify project members when a new document is added to one of their projects.
@@ -292,8 +315,13 @@ confirming they are logged and that an administrator can generate the summary re
 **Permissions model**
 
 - **FR-033**: System MUST grant document access according to existing roles: Employees (own and assigned
-  project documents), Team Leads (own plus their team members' documents), Project Managers (all documents
-  in their projects), Administrators (all documents).
+  project documents while they remain project members), Team Leads (own plus their team members' documents),
+  Project Managers (all documents in their projects), Administrators (all documents). Former project
+  membership and uploader status alone MUST NOT grant access; other role-based permissions or an explicit
+  share MAY continue to grant access. Documents remain associated with their project after a member is
+  removed.
+- **FR-034**: Document owners MUST be able to revoke a share at any time; revocation MUST remove access
+  granted by that share without affecting access independently granted by project membership or role.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -332,7 +360,7 @@ confirming they are logged and that an administrator can generate the summary re
 - Most documents will be under 10 MB; the hard limit per file is 25 MB.
 - Users are familiar with basic file management concepts.
 - The existing (mock) authentication and role system is the source of truth for user identity and
-  permissions, including team/department affiliation used for team-based sharing authorization.
+  permissions; department affiliation defines team recipients for document sharing.
 - Cloud migration (e.g., to Azure Blob Storage) is planned for production but is out of scope for this
   release; the design should not preclude it.
 - Deleted documents are permanently removed; there is no trash/recovery in this release.
