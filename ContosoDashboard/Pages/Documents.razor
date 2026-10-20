@@ -1,0 +1,268 @@
+@page "/documents"
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using ContosoDashboard.Models
+@using ContosoDashboard.Services
+@attribute [Authorize(Policy = "Employee")]
+@inject IDocumentService DocumentService
+@inject IProjectService ProjectService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<Documents> Logger
+
+<PageTitle>Upload Documents - ContosoDashboard</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Upload Documents</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-8 col-lg-10">
+            <EditForm Model="uploadModel" OnValidSubmit="UploadSelectedFilesAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger mb-3" />
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label for="document-title" class="form-label">Title</label>
+                                <InputText id="document-title" class="form-control" @bind-Value="uploadModel.Title" disabled="@isUploading" />
+                                <ValidationMessage For="() => uploadModel.Title" />
+                            </div>
+                            <div class="col-md-5">
+                                <label for="document-category" class="form-label">Category</label>
+                                <InputSelect id="document-category" class="form-select" @bind-Value="uploadModel.Category" disabled="@isUploading">
+                                    <option value="">Select a category</option>
+                                    @foreach (var category in DocumentService.Categories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => uploadModel.Category" />
+                            </div>
+                            <div class="col-12">
+                                <label for="document-description" class="form-label">Description</label>
+                                <InputTextArea id="document-description" class="form-control" rows="3" @bind-Value="uploadModel.Description" disabled="@isUploading" />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="document-project" class="form-label">Project</label>
+                                <InputSelect id="document-project" class="form-select" @bind-Value="selectedProjectId" disabled="@isUploading">
+                                    <option value="">No project</option>
+                                    @foreach (var project in projects)
+                                    {
+                                        <option value="@project.ProjectId">@project.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="document-tags" class="form-label">Tags</label>
+                                <InputText id="document-tags" class="form-control" @bind-Value="uploadModel.Tags" disabled="@isUploading" />
+                            </div>
+                            <div class="col-12">
+                                <label for="document-files" class="form-label">Files</label>
+                                <InputFile @key="inputKey"
+                                           id="document-files"
+                                           OnChange="OnFilesSelected"
+                                           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png"
+                                           multiple
+                                           disabled="@isUploading" />
+                                @if (selectedFiles.Count > 0)
+                                {
+                                    <div class="form-text">@selectedFiles.Count file(s) selected</div>
+                                }
+                            </div>
+                        </div>
+
+                        @if (isUploading)
+                        {
+                            <div class="mt-4" aria-live="polite">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>@currentFileName</span>
+                                    <span>@progressPercent%</span>
+                                </div>
+                                <div class="progress" role="progressbar" aria-valuenow="@progressPercent" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar" style="width: @progressPercent%"></div>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="mt-4">
+                            <button class="btn btn-primary" type="submit" disabled="@isUploading">
+                                @(isUploading ? "Uploading..." : "Upload documents")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+
+            @if (uploadResults.Count > 0)
+            {
+                <ul class="list-group mt-4" aria-live="polite">
+                    @foreach (var result in uploadResults)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <span class="me-3">@result.FileName</span>
+                            <span class="@(result.Succeeded ? "text-success" : "text-danger")">@result.Message</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly UploadFormModel uploadModel = new();
+    private readonly List<(string FileName, string Message, bool Succeeded)> uploadResults = [];
+    private List<IBrowserFile> selectedFiles = [];
+    private List<Project> projects = [];
+    private int currentUserId;
+    private int? selectedProjectId;
+    private int inputKey;
+    private int progressPercent;
+    private bool isUploading;
+    private string? currentFileName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdValue = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdValue, out currentUserId))
+        {
+            projects = await ProjectService.GetUserProjectsAsync(currentUserId);
+        }
+    }
+
+    private void OnFilesSelected(InputFileChangeEventArgs args)
+    {
+        try
+        {
+            selectedFiles = args.GetMultipleFiles(100).ToList();
+            uploadResults.Clear();
+        }
+        catch (InvalidOperationException)
+        {
+            selectedFiles.Clear();
+            uploadResults.Clear();
+            uploadResults.Add(("File selection", "Select no more than 100 files at a time.", false));
+        }
+    }
+
+    private async Task UploadSelectedFilesAsync()
+    {
+        if (currentUserId <= 0)
+        {
+            uploadResults.Add(("Upload", "Sign in before uploading a document.", false));
+            return;
+        }
+
+        if (selectedFiles.Count == 0)
+        {
+            uploadResults.Add(("Upload", "Select at least one file.", false));
+            return;
+        }
+
+        isUploading = true;
+        uploadResults.Clear();
+        while (selectedFiles.Count > 0)
+        {
+            IBrowserFile? selectedFile = selectedFiles[0];
+            var fileName = selectedFile.Name;
+            var fileSize = selectedFile.Size;
+            var fileDequeued = false;
+            currentFileName = fileName;
+            progressPercent = 0;
+
+            if (fileSize <= 0 || fileSize > DocumentService.MaximumFileSizeBytes)
+            {
+                selectedFiles.RemoveAt(0);
+                selectedFile = null;
+                uploadResults.Add((fileName, "Files must be larger than 0 bytes and no larger than 25 MB.", false));
+                continue;
+            }
+
+            try
+            {
+                using var content = new MemoryStream();
+                await using (var input = selectedFile.OpenReadStream(DocumentService.MaximumFileSizeBytes))
+                {
+                    var buffer = new byte[81920];
+                    long copiedBytes = 0;
+                    long lastReportedBytes = 0;
+                    int bytesRead;
+                    while ((bytesRead = await input.ReadAsync(buffer)) > 0)
+                    {
+                        copiedBytes += bytesRead;
+                        if (copiedBytes > DocumentService.MaximumFileSizeBytes)
+                        {
+                            throw new IOException("The file exceeds the 25 MB upload limit.");
+                        }
+
+                        await content.WriteAsync(buffer.AsMemory(0, bytesRead));
+                        if (copiedBytes - lastReportedBytes >= 256 * 1024 || copiedBytes == fileSize)
+                        {
+                            progressPercent = (int)Math.Min(100, copiedBytes * 100 / fileSize);
+                            lastReportedBytes = copiedBytes;
+                            await InvokeAsync(StateHasChanged);
+                        }
+                    }
+                }
+
+                selectedFiles.RemoveAt(0);
+                fileDequeued = true;
+                selectedFile = null;
+                content.Position = 0;
+                progressPercent = 100;
+                var request = new DocumentUploadRequest
+                {
+                    UploaderUserId = currentUserId,
+                    ContentStream = content,
+                    OriginalFileName = fileName,
+                    Title = uploadModel.Title,
+                    Category = uploadModel.Category,
+                    Description = uploadModel.Description,
+                    Tags = uploadModel.Tags,
+                    ProjectId = selectedProjectId
+                };
+                var result = await DocumentService.UploadAsync(request);
+                uploadResults.Add((fileName, result.Message, result.Succeeded));
+            }
+            catch (Exception exception)
+            {
+                if (!fileDequeued)
+                {
+                    selectedFiles.RemoveAt(0);
+                }
+
+                selectedFile = null;
+                Logger.LogWarning(exception, "Could not upload selected document {FileName}.", fileName);
+                uploadResults.Add((fileName, "The file could not be processed. No document was accepted.", false));
+            }
+        }
+
+        selectedFiles.Clear();
+        currentFileName = null;
+        progressPercent = 0;
+        isUploading = false;
+        inputKey++;
+    }
+
+    private sealed class UploadFormModel
+    {
+        [Required]
+        [StringLength(255, MinimumLength = 1)]
+        public string Title { get; set; } = string.Empty;
+
+        [Required]
+        public string Category { get; set; } = string.Empty;
+
+        [StringLength(2000)]
+        public string? Description { get; set; }
+
+        public string? Tags { get; set; }
+    }
+}

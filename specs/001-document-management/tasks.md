@@ -11,7 +11,7 @@
 
 **Purpose**: Create the test harness required by the plan.
 
-- [ ] T001 Create the .NET 8 xUnit test project with a reference to the application and test SDK packages in `ContosoDashboard.Tests/ContosoDashboard.Tests.csproj`
+- [X] T001 Create the .NET 8 xUnit test project with a reference to the application and test SDK packages in `ContosoDashboard.Tests/ContosoDashboard.Tests.csproj`
 
 ---
 
@@ -19,12 +19,12 @@
 
 **Purpose**: Establish shared storage, scanning, and authentication prerequisites. All story work depends on this phase.
 
-- [ ] T002 [P] Define the storage abstraction and options for upload, delete, download, and authorized URL operations in `ContosoDashboard/Services/IFileStorageService.cs`
-- [ ] T003 [P] Define the scanner abstraction, verdict type, and fail-closed result contract in `ContosoDashboard/Services/IFileScanner.cs`
-- [ ] T004 [P] Add the required Department claim from the persisted user profile to the mock login principal in `ContosoDashboard/Pages/Login.cshtml.cs`
-- [ ] T005 Implement root-contained relative-path validation and local filesystem upload, delete, and download operations in `ContosoDashboard/Services/LocalFileStorageService.cs` (depends on T002)
-- [ ] T006 Implement the local ClamAV scanner adapter with timeout and unavailable/indeterminate outcomes treated as failures in `ContosoDashboard/Services/ClamAvFileScanner.cs` (depends on T003)
-- [ ] T007 Register storage/scanner services and configure the upload root, scanner socket, and scan timeout without cloud dependencies in `ContosoDashboard/Program.cs` and `ContosoDashboard/appsettings.json` (depends on T005, T006)
+- [X] T002 [P] Define the storage abstraction and options for upload, delete, download, and authorized URL operations in `ContosoDashboard/Services/IFileStorageService.cs`
+- [X] T003 [P] Define the scanner abstraction, verdict type, and fail-closed result contract in `ContosoDashboard/Services/IFileScanner.cs`
+- [X] T004 [P] Add the required Department claim from the persisted user profile to the mock login principal in `ContosoDashboard/Pages/Login.cshtml.cs`
+- [X] T005 Implement root-contained relative-path validation and local filesystem upload, delete, and download operations in `ContosoDashboard/Services/LocalFileStorageService.cs` (depends on T002)
+- [X] T006 Implement the local ClamAV scanner adapter with timeout and unavailable/indeterminate outcomes treated as failures in `ContosoDashboard/Services/ClamAvFileScanner.cs` (depends on T003)
+- [X] T007 Register storage/scanner services and configure the upload root, scanner socket, and scan timeout without cloud dependencies in `ContosoDashboard/Program.cs` and `ContosoDashboard/appsettings.json` (depends on T005, T006)
 
 **Checkpoint**: Application can resolve local storage and malware-scanning services; login includes the Department claim.
 
@@ -38,14 +38,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [US1] Add upload service tests for required metadata, supported extensions, 25 MB limit, scan verdicts, unique paths, project authorization, and storage/database compensation in `ContosoDashboard.Tests/Services/DocumentUploadTests.cs`
+- [X] T008 [US1] Add upload service tests for required metadata, supported extensions, 25 MB limit, scan verdicts, unique paths, project authorization, and storage/database compensation in `ContosoDashboard.Tests/Services/DocumentUploadTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Add the integer-keyed Document and DocumentTag entities with required lengths, string Category, MIME capacity, and optional project/task references in `ContosoDashboard/Models/Document.cs` and `ContosoDashboard/Models/DocumentTag.cs`
-- [ ] T010 [US1] Configure document/tag relationships and indexes, create `ContosoDashboard/Migrations/20261020_AddDocuments.cs` without dropping existing SQLite data, and replace `EnsureCreated` with migration application in `ContosoDashboard/Data/ApplicationDbContext.cs` and `ContosoDashboard/Program.cs`
-- [ ] T011 [US1] Implement authorized upload orchestration, metadata/type/size validation, GUID path generation, scan-before-promotion ordering, failure cleanup, and post-commit project-member notifications in `ContosoDashboard/Services/DocumentService.cs`
-- [ ] T012 [US1] Add the `/documents` upload form with required title/category, optional description/project/tags, sequential multi-file progress/results, keyed InputFile reset, bounded MemoryStream copying, and cleared IBrowserFile references in `ContosoDashboard/Pages/Documents.razor`; add its navigation link in `ContosoDashboard/Shared/NavMenu.razor`
+- [X] T009 [US1] Add the integer-keyed Document and DocumentTag entities with required lengths, string Category, MIME capacity, and optional project/task references in `ContosoDashboard/Models/Document.cs` and `ContosoDashboard/Models/DocumentTag.cs`
+- [X] T010 [US1] Configure document/tag relationships and indexes, create `ContosoDashboard/Migrations/20261020191215_AddDocuments.cs` without dropping existing SQLite data, and replace `EnsureCreated` with migration application in `ContosoDashboard/Data/ApplicationDbContext.cs` and `ContosoDashboard/Program.cs`
+- [X] T011 [US1] Implement authorized upload orchestration, metadata/type/size validation, GUID path generation, scan-before-promotion ordering, failure cleanup, and post-commit project-member notifications in `ContosoDashboard/Services/DocumentService.cs`
+- [X] T012 [US1] Add the `/documents` upload form with required title/category, optional description/project/tags, sequential multi-file progress/results, keyed InputFile reset, bounded MemoryStream copying, and cleared IBrowserFile references in `ContosoDashboard/Pages/Documents.razor`; add its navigation link in `ContosoDashboard/Shared/NavMenu.razor`
 
 **Checkpoint**: Upload works independently and all rejected/failing uploads leave no document record or accepted file.
 
@@ -193,7 +193,7 @@
 
 - [ ] T037 [P] Add an end-to-end authorization matrix covering every service operation and both protected file routes in `ContosoDashboard.Tests/Services/DocumentAuthorizationMatrixTests.cs`
 - [ ] T038 Run the full automated suite and each quickstart acceptance flow, including scanner outage and 500-document performance checks, and record results against `specs/001-document-management/quickstart.md`
-- [ ] T039 Verify persisted files stay outside web root, all file keys are relative/GUID-based, migrations preserve existing records, and no cloud package was added in `ContosoDashboard/Program.cs` and `ContosoDashboard/Migrations/20261020_AddDocuments.cs`
+- [ ] T039 Verify persisted files stay outside web root, all file keys are relative/GUID-based, migrations preserve existing records, and no cloud package was added in `ContosoDashboard/Program.cs` and `ContosoDashboard/Migrations/20261020191215_AddDocuments.cs`
 
 ---
 

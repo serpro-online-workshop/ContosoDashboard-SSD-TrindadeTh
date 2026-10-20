@@ -43,6 +43,11 @@ builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection("DocumentStorage"));
+builder.Services.Configure<ClamAvOptions>(builder.Configuration.GetSection("ClamAV"));
+builder.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+builder.Services.AddSingleton<IFileScanner, ClamAvFileScanner>();
 
 // Add HttpContextAccessor for accessing user claims
 builder.Services.AddHttpContextAccessor();
@@ -56,12 +61,13 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        context.Database.EnsureCreated(); // For development - use migrations in production
+        await DatabaseMigrationRunner.ApplyAsync(context);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred creating the database.");
+        throw;
     }
 }
 
